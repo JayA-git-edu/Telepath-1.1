@@ -40,8 +40,11 @@ await page.evaluate(() => {
   const B = window.BOT;
   const orig = window.TELEPATH.game.update.bind(window.TELEPATH.game);
   window.TELEPATH.game.update = function botUpdate(dt) {
+    if (B.on) botThink(dt);
     orig(dt);
-    if (!B.on) return;
+  };
+
+  function botThink(dt) {
     const g = window.TELEPATH.game;
     if (g.scene === 'complete') { B.reached = true; B.on = false; return; }
     if (g.scene !== 'play' || !g.player) return;
@@ -53,6 +56,7 @@ await page.evaluate(() => {
     const press = (a, on) => {
       const code = { left: 'KeyA', right: 'KeyD', jump: 'Space', grab: 'KeyJ',
         throw: 'KeyK', stasis: 'KeyQ', dash: 'ShiftLeft', shock: 'KeyE', build: 'KeyF' }[a];
+      if (!code) return;
       if (on) { if (!input.down.has(code)) { input.down.add(code); input.pressed.add(code); } }
       else if (input.down.has(code)) { input.down.delete(code); input.released.add(code); }
     };
@@ -96,11 +100,28 @@ await page.evaluate(() => {
         if (Math.hypot(h.cx - plate.cx, h.cy - (plate.cy - 10)) < 12) press('grab', false);
         acted = true;
       } else {
-        const box2 = g.grabbables().find((e) =>
-          Math.hypot(e.cx - p.cx, e.cy - p.cy) < p.tk.range && e.kind !== 'projectile');
-        if (box2) {
-          aimAt(box2.cx, box2.cy);
+        const canLift = (e) => e.tier !== 2 || g.hasPower('ultimate');
+        const near = g.grabbables()
+          .filter((e) => e.kind !== 'projectile' && !e.heldBy)
+          .sort((a, b) => Math.hypot(a.cx - plate.cx, a.cy - plate.cy)
+                        - Math.hypot(b.cx - plate.cx, b.cy - plate.cy))[0];
+        if (near && canLift(near) && Math.hypot(near.cx - p.cx, near.cy - p.cy) < p.tk.range) {
+          aimAt(near.cx, near.cy);
           if (B.actT <= 0) { press('grab', true); B.actT = 0.35; }
+          acted = true;
+        } else if (near && !canLift(near) && g.hasPower('push')) {
+          // Too heavy to lift: get on the far side and blast it toward the plate.
+          const side = Math.sign(plate.cx - near.cx) || 1;
+          const standX = near.cx - side * 26;
+          if (Math.abs(p.cx - standX) > 8) {
+            press('right', p.cx < standX);
+            press('left', p.cx > standX);
+            B.moveHandled = true;
+          } else {
+            B.skipMove = true;
+            aimAt(near.cx, near.cy + 2);
+            if (B.actT <= 0) { press('throw', true); B.actT = 0.55; }
+          }
           acted = true;
         }
       }
@@ -122,13 +143,79 @@ await page.evaluate(() => {
       acted = true;
     }
 
+    // 3.5 A gap with no floor: freeze a held object into a stepping stone,
+    //     or conjure a platform if Ultimate is available.
+    // Terrain only: a platform the bot is riding must not count as "floor
+    // ahead", or it would step off mid-crossing.
+    const floorAhead = (n) => {
+      for (let k = 1; k <= 5; k++) {
+        if (g.level.solidRect({ x: p.x + dir * n, y: p.y + p.h + k * 4, w: p.w, h: 4 })) return true;
+      }
+      return false;
+    };
+    const bigGap = dir !== 0 && p.onGround && !floorAhead(64);
+    if (!acted && bigGap) {
+      // A platform you can hold while standing on it beats every other trick.
+      const plat = g.entities.find((e) => e.kind === 'platform' && e.grabbable && !e.dead &&
+        Math.hypot(e.cx - p.cx, e.cy - p.cy) < 140);
+      if (plat) {
+        if (plat.isRiding(p)) {
+          const holdingIt = p.tk.held.includes(plat);
+          if (holdingIt) aimAt(p.cx + dir * 46, p.cy - 2);
+          else aimAt(plat.cx, plat.cy);
+          press('grab', true);
+          B.actT = 0.5;
+          B.skipMove = true;
+        } else {
+          press('right', plat.cx > p.cx + 4);
+          press('left', plat.cx < p.cx - 4);
+          if (p.onGround && B.jumpT <= 0 && Math.abs(plat.cx - p.cx) < 30) {
+            press('jump', true);
+            B.jumpT = 0.75;
+          }
+          B.moveHandled = true;
+        }
+        acted = true;
+      }
+      if (!acted && g.hasPower('stasis') && p.tk.held.length) {
+        aimAt(p.cx + dir * 40, p.cy + 16);
+        if (B.actT <= 0) { press('stasis', true); B.actT = 0.6; }
+        acted = true;
+        B.skipMove = true;
+      } else if (!acted && g.hasPower('stasis') && !p.tk.held.length) {
+        const ammo = g.grabbables().filter((e) => !e.heldBy && e.kind !== 'projectile' && !e.frozen)
+          .sort((a, b) => Math.hypot(a.cx - p.cx, a.cy - p.cy) - Math.hypot(b.cx - p.cx, b.cy - p.cy))[0];
+        if (ammo && Math.hypot(ammo.cx - p.cx, ammo.cy - p.cy) < p.tk.range) {
+          aimAt(ammo.cx, ammo.cy);
+          if (B.actT <= 0) { press('grab', true); B.actT = 0.35; }
+          acted = true;
+          B.skipMove = true;
+        }
+      }
+      if (!acted && g.hasPower('ultimate') && B.actT <= 0) {
+        p.tk.aimPoint.x = p.cx + dir * 44;
+        p.tk.aimPoint.y = p.cy + 14;
+        press('build', true);
+        B.actT = 0.8;
+        acted = true;
+        B.skipMove = true;
+      }
+    }
+
     // 4. Otherwise: walk toward the goal, jump at walls and gaps.
     if (!acted) {
       aimAt(p.cx + dir * 40, p.cy - 10);
       if (p.tk.held.length && B.actT <= 0) { press('throw', true); B.actT = 0.4; }
     }
-    press('right', dir > 0);
-    press('left', dir < 0);
+    if (B.moveHandled) {
+      // the branch above already chose a direction
+    } else if (B.skipMove) {
+      press('right', false);
+      press('left', false);
+    } else {
+      press('right', dir > 0);
+      press('left', dir < 0);
+    }
 
     const blockedAhead = p.collides(g.level, dir * 4, 0);
     const gapAhead = !p.collides(g.level, dir * 10, 2) && !p.collides(g.level, dir * 10, 12);
@@ -136,9 +223,10 @@ await page.evaluate(() => {
     B.lastX = p.cx;
 
     B.jumpT -= dt;
-    const wantJump = p.onGround && (blockedAhead || (gapAhead && dir !== 0) || B.stuckT > 0.5);
-    if (wantJump && B.jumpT <= 0) { press('jump', true); B.jumpT = 0.45; }
-    else if (B.jumpT < 0.28) press('jump', false);
+    const wantJump = !B.skipMove && p.onGround &&
+      (blockedAhead || (gapAhead && dir !== 0) || B.stuckT > 0.5);
+    if (wantJump && B.jumpT <= 0) { press('jump', true); B.jumpT = 0.75; }
+    else if (B.jumpT < 0.36) press('jump', false);
 
     // Stuck for a long time: try the heavy tools.
     if (B.stuckT > 1.6) {
@@ -153,11 +241,20 @@ await page.evaluate(() => {
       }
       B.stuckT = 0;
     }
+    if (B.debug && B.debug.length < 200 && Math.floor(B.tick * 4) !== B.lastDbg) {
+      B.lastDbg = Math.floor(B.tick * 4);
+      B.debug.push(`x=${Math.round(p.cx)} y=${Math.round(p.cy)} g=${p.onGround ? 1 : 0} ` +
+        `held=${p.tk.held.map((h) => h.kind).join(',') || '-'} acted=${acted ? 1 : 0} gap=${bigGap ? 1 : 0} ` +
+        `f40=${floorAhead(40) ? 1 : 0} f64=${floorAhead(64) ? 1 : 0} stuck=${B.stuckT.toFixed(1)}`);
+    }
+    B.skipMove = false;
+    B.moveHandled = false;
     B.actT -= dt;
     if (B.actT < 0) {
-      press('grab', false); press('throw', false); press('shock', false); press('build', false);
+      press('grab', false); press('throw', false); press('shock', false);
+      press('build', false); press('stasis', false);
     }
-  };
+  }
 });
 
 const results = [];
@@ -189,6 +286,9 @@ for (const i of indices) {
     B.maxX = 0; B.reached = false;
   }, { idx: i, powers: def.powers });
 
+  if (process.env.BOT_DEBUG) {
+    await page.evaluate(() => { window.BOT.debug = []; });
+  }
   const deadline = Date.now() + BUDGET * 1000;
   let res = null;
   while (Date.now() < deadline) {
@@ -211,6 +311,10 @@ for (const i of indices) {
   results.push({ i, id: def.id, name: def.name, ...res, pct, boss: def.boss });
   if (!res.reached) {
     await page.screenshot({ path: `${SHOT_DIR}/stuck-${def.id}.png`, clip: box });
+    if (process.env.BOT_DEBUG) {
+      const dbg = await page.evaluate(() => window.BOT.debug || []);
+      dbg.forEach((l) => console.log('    ' + l));
+    }
   }
 }
 

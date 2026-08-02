@@ -66,6 +66,20 @@ for (const [i, L] of LEVELS.entries()) {
     }
   }
 
+  // Nothing may spawn on top of Eli.
+  const spawn = find('P');
+  if (spawn) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const ch = (rows[spawn.y + dy] || '')[spawn.x + dx];
+        if (ch && 'cCQo'.includes(ch)) {
+          err(`"${ch}" at ${spawn.x + dx},${spawn.y + dy} overlaps the player spawn`);
+        }
+      }
+    }
+  }
+
   // Entities.
   for (const e of L.entities || []) {
     if (!ENTITY_TYPES.has(e.t)) { err(`unknown entity type ${e.t}`); continue; }

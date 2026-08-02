@@ -130,6 +130,7 @@ export class Game {
       this.spawnFromDef(e);
     }
     this.level.setEntities(this.entities);
+    this.totalShards = this.countShards();
 
     this.player = new Player(this.level.playerSpawn.x, this.level.playerSpawn.y);
     this.player.game = this;
@@ -243,7 +244,7 @@ export class Game {
     this.shardsThisRun.add(`${shard.spawnX},${shard.spawnY}`);
     this.save.shards[id] = Math.max(this.save.shards[id] || 0, this.shardsThisRun.size);
     this.persist();
-    this.toast(`CRYSTAL SHARD ${this.shardsThisRun.size}/${this.countShards()}`);
+    this.toast(`CRYSTAL SHARD ${this.shardsThisRun.size}/${this.totalShards}`);
   }
 
   countShards() {

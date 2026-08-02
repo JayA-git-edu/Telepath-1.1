@@ -241,7 +241,7 @@ export function drawComplete(game, r) {
   r.text('AREA CLEAR', VIEW_W / 2, 84, { color: ACCENT, align: 'center', scale: 2, alpha: a });
   r.text(def.name, VIEW_W / 2, 112, { color: '#dff2ff', align: 'center', alpha: a });
   const shards = game.shardsThisRun ? game.shardsThisRun.size : 0;
-  const total = game.countShards() + shards;
+  const total = game.totalShards || shards;
   r.text(`SHARDS  ${shards}/${total}`, VIEW_W / 2, 132, { color: GOLD, align: 'center', alpha: a });
   r.text(`TIME  ${game.levelTime.toFixed(1)}S`, VIEW_W / 2, 144, { color: DIM, align: 'center', alpha: a });
   if (t > 0.6) {

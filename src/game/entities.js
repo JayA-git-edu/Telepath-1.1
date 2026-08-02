@@ -272,9 +272,7 @@ export class Door extends Solid {
     this.open = approach(this.open, target, dt * 1.6);
     if (prev !== this.open && (prev === 0 || prev === 1)) game.audio.play('door');
     this.collidable = this.open < 0.85;
-    const openH = this.tiles * TILE * (1 - this.open);
-    const dy = (this.y + this.h) - (this.spawnY + openH);
-    this.h = Math.max(1, openH);
+    this.h = Math.max(1, this.tiles * TILE * (1 - this.open));
     this.y = this.spawnY;
   }
 
@@ -390,6 +388,8 @@ export class MovingPlatform extends Solid {
     this.heldBy = null;
     this.spawnX = x; this.spawnY = y;
     this.freeAxis = opts.axis || null;   // 'x' | 'y' when player-driven
+    this.driveSpeed = opts.driveSpeed || 66;
+    this.solidWhileHeld = true;
     this.frozen = 0;
   }
 
@@ -416,6 +416,27 @@ export class MovingPlatform extends Solid {
     }
     const step = Math.min(d, this.speed * dt);
     this.moveSolid(game.level, (dx / d) * step, (dy / d) * step, game.allActors());
+  }
+
+  /**
+   * Steering for a platform the player is standing on. The aim vector acts
+   * like a joystick - following an aim *point* would run away, because the
+   * point moves with the rider it is carrying.
+   */
+  driveDir(game, ax, ay, dt) {
+    const mag = Math.hypot(ax, ay);
+    if (mag < 0.2) return;
+    let dx = (ax / mag) * this.driveSpeed * dt;
+    let dy = (ay / mag) * this.driveSpeed * dt;
+    if (this.freeAxis === 'x') dy = 0;
+    if (this.freeAxis === 'y') dx = 0;
+    const actors = game.allActors();
+    if (dx && !game.level.solidRect({ x: this.x + dx, y: this.y, w: this.w, h: this.h })) {
+      this.moveSolid(game.level, dx, 0, actors);
+    }
+    if (dy && !game.level.solidRect({ x: this.x, y: this.y + dy, w: this.w, h: this.h })) {
+      this.moveSolid(game.level, 0, dy, actors);
+    }
   }
 
   /** Used when the player telekinetically drives the platform. */
@@ -499,7 +520,8 @@ export class Shard extends Prop {
     this.bobT = Math.random() * 6;
   }
 
-  reset() { super.reset(); this.dead = false; }
+  /** Collected shards stay collected across deaths. */
+  reset() {}
 
   update(dt, game) {
     this.bobT += dt;
@@ -525,6 +547,8 @@ export class CrystalKey extends Prop {
     this.channel = opts.ch;
     this.bobT = 0;
   }
+
+  reset() {}
 
   update(dt, game) {
     this.bobT += dt;
@@ -620,6 +644,8 @@ export class PowerCrystal extends Prop {
     this.power = opts.power;
     this.t = 0;
   }
+
+  reset() {}
 
   update(dt, game) {
     this.t += dt;

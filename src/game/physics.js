@@ -135,7 +135,7 @@ export class Solid extends Actor {
   isRiding(a) {
     return (
       a.x + a.w > this.x && a.x < this.x + this.w &&
-      Math.abs((a.y + a.h) - this.y) <= 1.5
+      Math.abs((a.y + a.h) - this.y) <= 3
     );
   }
 }

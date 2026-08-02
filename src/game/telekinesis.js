@@ -169,7 +169,12 @@ export class Telekinesis {
       return true;
     }
     if (!target) {
-      // Pull: yank an out-of-lift-range object (or enemy) toward the player.
+      // Nothing under the reticle: chained objects are set down, otherwise try
+      // to yank something in from further out.
+      if (this.held.length && game.hasPower('chain')) {
+        this.release(game);
+        return true;
+      }
       if (game.hasPower('pull')) return this.pull(game);
       return false;
     }
@@ -497,7 +502,12 @@ export class Telekinesis {
       const tx = this.aimPoint.x + px - h.w / 2;
       const ty = this.aimPoint.y + py - h.h / 2;
       if (h.kind === 'platform') {
-        h.driveTo(game, tx, ty, dt);
+        // Short hysteresis: a rider who bounces a pixel off the deck should
+        // not flip the platform back to reticle-following mid-crossing.
+        if (h.isRiding(this.player)) h.rideT = 0.4;
+        else h.rideT = Math.max(0, (h.rideT || 0) - dt);
+        if (h.rideT > 0) h.driveDir(game, this.aim.x, this.aim.y, dt);
+        else h.driveTo(game, tx, ty, dt);
       } else {
         const k = 1 - Math.pow(0.0001, dt);
         const nx = lerp(h.x, tx, k);

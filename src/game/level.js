@@ -231,7 +231,9 @@ export class Level {
     if (!this.entities) return null;
     for (const e of this.entities) {
       if (e === ignore || e.dead || !e.solid || e.collidable === false) continue;
-      if (e.heldBy) continue;
+      // Held props pass through Eli so he can carry them in front of him - but
+      // a platform he is standing on has to stay solid underfoot.
+      if (e.heldBy && !e.solidWhileHeld) continue;
       if (r.x < e.x + e.w && r.x + r.w > e.x && r.y < e.y + e.h && r.y + r.h > e.y) return e;
     }
     return null;
