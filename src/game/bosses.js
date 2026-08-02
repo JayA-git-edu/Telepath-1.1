@@ -134,7 +134,7 @@ export class Boss extends Actor {
     if (this.vulnerable) {
       const a = 0.4 + Math.sin(this.animT * 12) * 0.25;
       r.rectOutline(this.x - 2, this.y - 2, this.w + 4, this.h + 4, `rgba(255,220,90,${a})`);
-      r.addGlow(this.cx, this.cy, this.w, '#ffd166', 0.3);
+      r.addGlow(this.cx, this.cy, this.w * 0.7, '#ffd166', 0.16);
     }
     if (this.introT > 0) {
       r.addGlow(this.cx, this.cy, this.w, '#ff5c5c', 0.4 * (this.introT / 1.6));
@@ -238,8 +238,8 @@ export class EMech extends Boss {
 
   draw(r, time) {
     this.drawSprite(r, this.sprite, this.state === 'charge' ? 6 : 3);
-    r.addGlow(this.cx, this.cy - 4, 30, this.vulnerable ? '#ffd166' : '#ff7a5c',
-      this.vulnerable ? 0.5 : 0.3);
+    r.addGlow(this.cx, this.cy - 4, 26, this.vulnerable ? '#ffd166' : '#ff7a5c',
+      this.vulnerable ? 0.28 : 0.22);
     r.addLight(this.cx, this.cy, 110, 0.6);
   }
 }
