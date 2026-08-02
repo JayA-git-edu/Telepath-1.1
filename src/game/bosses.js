@@ -112,7 +112,9 @@ export class Boss extends Actor {
     for (const e of game.entities) {
       if (e.dead || e.heldBy || !e.thrown) continue;
       if (Math.hypot(e.vx, e.vy) > 150 && rectsOverlap(this.rect, e.rect)) {
-        this.damage(game, e.impactDamage(), Math.sign(e.vx) || 1);
+        // Every clean hit takes the same bite out of the bar, whatever it was
+        // thrown with - so a fight is a fixed number of good throws.
+        this.damage(game, 2, Math.sign(e.vx) || 1);
         e.vx *= -0.4; e.vy *= -0.4;
         e.thrown = false;
       }
@@ -367,8 +369,11 @@ export class BlackReaper extends Boss {
         }
         break;
       case 'reveal':
+        // She materialises low to swing the scythe - which is also the only
+        // moment she is close enough to throw something back at.
         this.vulnerable = true;
-        if (this.stateT > 2.4) {
+        this.y = approach(this.y, this.spawnY + 74, 150 * dt);
+        if (this.stateT > 2.8) {
           this.vulnerable = false;
           this.setState('hover');
         }
@@ -426,9 +431,11 @@ export class MindWarden extends Boss {
   ensureShield(game) {
     this.shieldOrbs = this.shieldOrbs.filter((o) => !o.dead && !o.consumed);
     if (this.shieldOrbs.length === 0 && this.state !== 'exposed') {
-      for (let i = 0; i < 3; i++) {
+      // Two orbs, not three: strippable in one sweep of Chain Control, and
+      // still possible one at a time.
+      for (let i = 0; i < 2; i++) {
         const crate = new Crate(this.cx - 8, this.cy - 8, 'psy');
-        crate.orbitAngle = (i / 3) * Math.PI * 2;
+        crate.orbitAngle = (i / 2) * Math.PI * 2;
         crate.isShield = true;
         crate.gravity = 0;
         crate.throwDamage = 2;
@@ -527,7 +534,7 @@ export class TheEntity extends Boss {
         this.ringT -= dt;
         if (this.ringT <= 0) {
           this.ringT = this.phase === 3 ? 1.5 : 2.2;
-          const n = 6 + this.phase * 2;
+          const n = 5 + this.phase;
           for (let i = 0; i < n; i++) {
             const a = (i / n) * Math.PI * 2 + this.animT;
             game.spawnProjectile(this.cx, this.cy, Math.cos(a) * 110, Math.sin(a) * 110, {

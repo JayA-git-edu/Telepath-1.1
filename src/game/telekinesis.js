@@ -155,8 +155,8 @@ export class Telekinesis {
   }
 
   // ----------------------------------------------------------------- verbs
-  grab(game) {
-    const device = this.findDevice(game);
+  grab(game, opts = {}) {
+    const device = opts.propsOnly ? null : this.findDevice(game);
     const target = this.findTarget(game);
     // A device right under the reticle wins over a distant crate.
     if (device && (!target || Math.hypot(device.cx - this.aimPoint.x, device.cy - this.aimPoint.y) <
@@ -169,13 +169,8 @@ export class Telekinesis {
       return true;
     }
     if (!target) {
-      // Nothing under the reticle: chained objects are set down, otherwise try
-      // to yank something in from further out.
-      if (this.held.length && game.hasPower('chain')) {
-        this.release(game);
-        return true;
-      }
-      if (game.hasPower('pull')) return this.pull(game);
+      // Nothing under the reticle: try to yank something in from further out.
+      if (!opts.propsOnly && game.hasPower('pull') && !this.held.length) return this.pull(game);
       return false;
     }
     if (this.held.length >= this.capacity) {
@@ -475,11 +470,17 @@ export class Telekinesis {
     }
 
     // Verbs
+    // Grab is hold-to-hold, always. Chain Control does not change that: it lets
+    // you sweep the reticle over more objects while the button stays down.
     if (input.hit('grab') && this.cooldown <= 0) {
       this.grab(game);
       this.cooldown = 0.12;
+    } else if (input.held('grab') && this.held.length < this.capacity && this.cooldown <= 0) {
+      // Keep trying while the button is down: forgiving to aim with, and the
+      // only way Chain Control can sweep up a second and third object.
+      this.cooldown = this.grab(game, { propsOnly: true }) ? 0.2 : 0.08;
     }
-    if (input.letGo('grab') && this.held.length && !game.hasPower('chain')) {
+    if (input.letGo('grab') && this.held.length) {
       this.release(game);
     }
     if (input.hit('throw')) {

@@ -26,8 +26,8 @@ export class Player extends Actor {
     super(x + 3, y - 4, 10, 20);
     this.kind = 'player';
     this.facing = 1;
-    this.hp = 3;
-    this.maxHp = 3;
+    this.hp = 4;
+    this.maxHp = 4;
     this.invuln = 0;
     this.coyote = 0;
     this.jumpBuffer = 0;
