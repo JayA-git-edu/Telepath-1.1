@@ -692,7 +692,6 @@ def main():
         "platform": platform(48),
         "crystal_key": crystal_key(),
         "heart_full": heart(True),
-        "heart_empty": heart(False),
         "logo": logo(),
     }
     for name, img in single.items():

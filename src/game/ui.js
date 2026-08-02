@@ -14,27 +14,69 @@ function panel(r, x, y, w, h, alpha = 0.86) {
   r.rect(x + 2, y + 2, w - 4, 1, 'rgba(142,247,255,0.12)', true);
 }
 
+/**
+ * A framed meter with a two-tone fill, a lagging "damage ghost" and optional
+ * segment ticks. Used for both health and energy so they read as one system.
+ */
+function meter(r, x, y, w, h, frac, opts = {}) {
+  const ghost = opts.ghost === undefined ? frac : opts.ghost;
+  r.rect(x, y, w, h, 'rgba(5,7,18,0.88)', true);
+  r.rectOutline(x, y, w, h, opts.frame || 'rgba(142,247,255,0.45)', true);
+  const iw = w - 2;
+  const ih = h - 2;
+  if (ghost > frac) {
+    r.rect(x + 1, y + 1, Math.max(0, iw * ghost), ih, opts.ghostColor || 'rgba(255,255,255,0.35)', true);
+  }
+  const fw = Math.max(0, Math.round(iw * frac));
+  if (fw > 0) {
+    r.rect(x + 1, y + 1, fw, ih, opts.color, true);
+    r.rect(x + 1, y + 1, fw, 1, opts.highlight || 'rgba(255,255,255,0.45)', true);
+    r.rect(x + 1, y + h - 2, fw, 1, opts.shade || 'rgba(0,0,0,0.25)', true);
+  }
+  for (let i = 1; i < (opts.segments || 0); i++) {
+    r.rect(x + 1 + Math.round((iw * i) / opts.segments), y + 1, 1, ih, 'rgba(6,8,20,0.75)', true);
+  }
+}
+
 // ------------------------------------------------------------------- HUD
 export function drawHud(game, r) {
   const p = game.player;
-  // Hearts
-  for (let i = 0; i < p.maxHp; i++) {
-    r.image(i < p.hp ? 'heart_full' : 'heart_empty', 8 + i * 14, 8, { screen: true });
-  }
+  const BAR_X = 20;
+  const BAR_W = 62;
 
-  // Energy bar
+  // Health: one segment per heart, with a white ghost that drains after a hit.
+  const hp = Math.max(0, p.hp) / p.maxHp;
+  const low = p.hp <= 1;
+  const pulse = low ? 0.6 + Math.abs(Math.sin(game.time * 6)) * 0.4 : 1;
+  r.image('heart_full', 6, 7, { screen: true, alpha: low ? pulse : 1 });
+  meter(r, BAR_X, 8, BAR_W, 8, hp, {
+    ghost: (game.hpGhost || 0) / p.maxHp,
+    color: low ? `rgba(255,${Math.round(60 * pulse)},110,1)` : '#ff5c7a',
+    highlight: 'rgba(255,190,205,0.65)',
+    shade: 'rgba(120,20,50,0.55)',
+    frame: 'rgba(255,140,165,0.5)',
+    segments: p.maxHp,
+  });
+
+  // Energy
   const tk = p.tk;
-  const bw = 60;
   const frac = tk.energy / tk.maxEnergy;
-  r.rect(8, 24, bw + 2, 6, 'rgba(6,8,20,0.8)', true);
-  r.rectOutline(8, 24, bw + 2, 6, 'rgba(142,247,255,0.5)', true);
   const col = tk.overloaded > 0 ? '#ff6b6b' : (frac > 0.3 ? ACCENT : '#ffb04f');
-  r.rect(9, 25, Math.max(0, bw * frac), 4, col, true);
+  // little psi mote, drawn rather than scaled (fractional sprite scaling smears)
+  r.rect(9, 20, 2, 4, ACCENT, true);
+  r.rect(8, 21, 4, 2, ACCENT, true);
+  r.rect(9, 19, 2, 1, 'rgba(230,255,255,0.7)', true);
+  meter(r, BAR_X, 19, BAR_W, 6, frac, {
+    color: col,
+    highlight: 'rgba(230,255,255,0.6)',
+    shade: 'rgba(10,60,80,0.5)',
+  });
 
-  // Power icons
+  // Power icons (redundant on touch: the on-screen buttons show them)
   const powers = game.save.powers;
-  let x = 8;
-  const y = 36;
+  if (game.touch && game.touch.enabled) return drawHudTail(game, r);
+  let x = 6;
+  const y = 29;
   for (let i = 0; i < POWERS.length; i++) {
     if (!powers[i]) continue;
     const flash = game.hudPowerFlash > 0 && i === powers.lastIndexOf(true);
@@ -45,6 +87,10 @@ export function drawHud(game, r) {
     x += 18;
   }
 
+  drawHudTail(game, r);
+}
+
+function drawHudTail(game, r) {
   // Keys
   if (game.keys > 0) {
     r.image('crystal_key', VIEW_W - 26, 6, { screen: true });
@@ -61,10 +107,14 @@ export function drawHud(game, r) {
     const w = 180;
     const bx = (VIEW_W - w) / 2;
     r.text(boss.name, VIEW_W / 2, VIEW_H - 34, { color: '#ff9b9b', align: 'center' });
-    r.rect(bx, VIEW_H - 24, w, 7, 'rgba(6,8,20,0.85)', true);
-    r.rectOutline(bx, VIEW_H - 24, w, 7, 'rgba(255,120,120,0.7)', true);
-    const frac2 = Math.max(0, boss.hp / boss.maxHp);
-    r.rect(bx + 1, VIEW_H - 23, (w - 2) * frac2, 5, boss.vulnerable ? GOLD : '#ff5c5c', true);
+    meter(r, bx, VIEW_H - 24, w, 8, Math.max(0, boss.hp / boss.maxHp), {
+      ghost: (game.bossGhost || 0),
+      color: boss.vulnerable ? GOLD : '#ff5c5c',
+      highlight: boss.vulnerable ? 'rgba(255,244,200,0.7)' : 'rgba(255,180,180,0.6)',
+      shade: 'rgba(90,15,25,0.6)',
+      frame: 'rgba(255,120,120,0.7)',
+      segments: Math.max(1, Math.round(boss.maxHp / 2)),
+    });
   }
 }
 
@@ -154,10 +204,17 @@ export function drawTitle(game, r) {
     r.text(item, VIEW_W / 2, y, { color: sel ? '#ffffff' : DIM, align: 'center' });
   });
 
-  r.text('MOVE  A D   JUMP  SPACE   GRAB  LMB/J   THROW  RMB/K', VIEW_W / 2, VIEW_H - 26,
-    { color: 'rgba(120,160,180,0.7)', align: 'center' });
-  r.text('STASIS  Q    DASH  SHIFT    SHOCK  E    BUILD  F', VIEW_W / 2, VIEW_H - 16,
-    { color: 'rgba(120,160,180,0.5)', align: 'center' });
+  if (game.touch && game.touch.enabled) {
+    r.text('DRAG TO AIM   TAP THE PAD TO MOVE', VIEW_W / 2, VIEW_H - 26,
+      { color: 'rgba(120,160,180,0.7)', align: 'center' });
+    r.text('HOLD GRAB TO LIFT   TAP THROW TO HURL', VIEW_W / 2, VIEW_H - 16,
+      { color: 'rgba(120,160,180,0.5)', align: 'center' });
+  } else {
+    r.text('MOVE  A D   JUMP  SPACE   GRAB  LMB/J   THROW  RMB/K', VIEW_W / 2, VIEW_H - 26,
+      { color: 'rgba(120,160,180,0.7)', align: 'center' });
+    r.text('STASIS  Q    DASH  SHIFT    SHOCK  E    BUILD  F', VIEW_W / 2, VIEW_H - 16,
+      { color: 'rgba(120,160,180,0.5)', align: 'center' });
+  }
 }
 
 export function drawSettings(game, r) {

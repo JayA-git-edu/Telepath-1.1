@@ -61,25 +61,15 @@ export class Input {
     });
     c.addEventListener('mouseleave', () => { this.mouse.inside = false; });
 
-    // Touch: treat as mouse aim + tap-to-grab, so the game is at least reachable
-    // on a tablet even though it is designed for keyboard + mouse.
-    c.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      this._touch(e);
-      this._press('Mouse0');
-    }, { passive: false });
-    c.addEventListener('touchmove', (e) => { e.preventDefault(); this._touch(e); }, { passive: false });
-    c.addEventListener('touchend', (e) => { e.preventDefault(); this._release('Mouse0'); }, { passive: false });
+    // Touch input is owned by TouchControls, which needs multi-touch and knows
+    // where the on-screen buttons are.
   }
 
-  _touch(e) {
-    const t = e.changedTouches[0];
-    if (!t) return;
-    const r = this.canvas.getBoundingClientRect();
-    this.mouse.x = (t.clientX - r.left) * (this.canvas.width / r.width);
-    this.mouse.y = (t.clientY - r.top) * (this.canvas.height / r.height);
-    this.mouse.inside = true;
-    this.usedMouseAim = true;
+  /** Press or release a button from the on-screen touch controls. */
+  setVirtual(action, on) {
+    const code = `V:${action}`;
+    if (on) this._press(code);
+    else this._release(code);
   }
 
   _press(code) {
@@ -150,7 +140,7 @@ export class Input {
       dash: ['PadDash'], shock: ['PadShock'], pause: ['PadPause'],
       confirm: ['PadJump', 'PadGrab'], back: ['PadPause'], build: ['PadStasis'],
     }[action] || [];
-    return (ACTIONS[action] || []).concat(extra);
+    return (ACTIONS[action] || []).concat(extra, [`V:${action}`]);
   }
 
   held(action) {

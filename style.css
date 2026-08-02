@@ -48,3 +48,19 @@ canvas#game {
   50% { content: ".."; }
   75% { content: "..."; }
 }
+
+/* Touch devices: fill the screen, no page bounce, no selection on drag. */
+html[data-touch="1"], html[data-touch="1"] body {
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-touch="1"] #wrap {
+  background: #06060d;
+}
+
+html[data-touch="1"] canvas#game {
+  box-shadow: none;
+}

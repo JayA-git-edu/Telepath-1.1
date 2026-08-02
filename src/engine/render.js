@@ -25,16 +25,19 @@ export class Renderer {
     this.flashColor = '#ffffff';
     this._tinted = new Map();
     this.time = 0;
+    this.integerScale = true;
     this.fitToWindow();
     addEventListener('resize', () => this.fitToWindow());
   }
 
   fitToWindow() {
-    const pad = 8;
+    const pad = this.integerScale ? 8 : 0;
     const sx = (innerWidth - pad) / VIEW_W;
     const sy = (innerHeight - pad) / VIEW_H;
     let s = Math.min(sx, sy);
-    s = s >= 1 ? Math.max(1, Math.floor(s)) : s;
+    // Integer scaling keeps desktop pixels crisp; on a phone that would throw
+    // away most of the screen, so fill it instead.
+    if (this.integerScale && s >= 1) s = Math.max(1, Math.floor(s));
     this.canvas.style.width = `${Math.round(VIEW_W * s)}px`;
     this.canvas.style.height = `${Math.round(VIEW_H * s)}px`;
     this.scale = s;

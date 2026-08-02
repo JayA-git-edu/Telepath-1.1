@@ -30,6 +30,13 @@ open http://127.0.0.1:8123
 Aim with the mouse (or the right stick). Keyboard-only play aims in the
 direction you are facing, nudged by up/down.
 
+On a touch device an on-screen pad appears automatically: a d-pad bottom-left,
+jump and grab bottom-right, throw and the powers you have unlocked up the right
+edge, and pause top-right. Drag anywhere else to aim - one thumb can hold a
+button while another aims. Menus get their own arrows and an OK button. The
+controls never appear on a mouse device; force either state with `?touch=1`
+or `?touch=0` for testing.
+
 ## The powers
 
 Each is found in the world that teaches it, and every later level assumes it.
@@ -104,6 +111,8 @@ node tools/fix_levels.mjs                # drop floating props onto the floor
 npx http-server -p 8123 -c-1 &
 node tests/playtest.mjs      # boots the real game, drives menus and every level,
                              # asserts no console errors and that each level completes
+node tests/touch.mjs         # emulates a phone: the pad appears only on touch,
+                             # and every button drives the game
 node tests/bot.mjs           # a heuristic bot actually plays each level with only
                              # the powers the player would own at that point
 ```

@@ -3,6 +3,7 @@
 import { Assets } from './engine/assets.js';
 import { Input } from './engine/input.js';
 import { Audio } from './engine/audio.js';
+import { TouchControls, detectTouch } from './engine/touch.js';
 import { Game } from './game/game.js';
 
 const STEP = 1 / 60;
@@ -21,6 +22,14 @@ async function boot() {
   const input = new Input(canvas);
   const audio = new Audio();
   const game = new Game(canvas, assets, input, audio);
+
+  const touch = new TouchControls(canvas, input);
+  game.touch = touch;
+  if (touch.enabled) {
+    document.documentElement.dataset.touch = '1';
+    game.renderer.integerScale = false;
+    game.renderer.fitToWindow();
+  }
 
   // Browsers require a gesture before audio can start.
   const kick = () => audio.resume();
@@ -62,7 +71,7 @@ async function boot() {
   requestAnimationFrame(frame);
 
   // Expose for the automated playtest harness.
-  window.TELEPATH = { game, assets, input, audio };
+  window.TELEPATH = { game, assets, input, audio, touch };
 }
 
 boot().catch((err) => {

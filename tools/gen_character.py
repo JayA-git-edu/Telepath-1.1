@@ -18,17 +18,20 @@ GROUND = 30.0
 PAL = {
     "line": hexc("241a33"),
     "skin": hexc("ffd0a0"),
+    "skin_hi": hexc("ffe8cc"),
     "skin_sh": hexc("e2a274"),
     "hair": hexc("3b2b4f"),
     "hair_hi": hexc("614a80"),
     "hood": hexc("2fb8c6"),
     "hood_sh": hexc("1a7c8c"),
+    "hood_dk": hexc("125863"),
     "hood_hi": hexc("77e6ec"),
     "pants": hexc("3d4c72"),
     "pants_sh": hexc("2a3555"),
     "shoe": hexc("ec5a48"),
     "shoe_sh": hexc("a8362b"),
     "scarf": hexc("ff9257"),
+    "scarf_hi": hexc("ffc094"),
     "scarf_sh": hexc("d3612e"),
     "white": hexc("ffffff"),
     "psy": hexc("8ef7ff"),
@@ -59,6 +62,75 @@ def limb(c, x0, y0, x1, y1, w0, w1, col):
         c.circle(x, y, r, col)
 
 
+# ------------------------------------------------------------------ the head
+# Hand-authored, because at 13 pixels wide a face is drawn pixel by pixel or
+# not at all - the IK puppet handles the body, this handles the character.
+HEAD = [
+    "...KKKKK....",
+    "..KkkkKKKK..",
+    ".KkkkKKKKKK.",
+    ".KKKKKKKKKK.",
+    ".KKKSSSSSSS.",
+    "KKKSSSSSSSS.",
+    "KKrSSPSEPSS.",
+    "KKrSSPSEPSS.",
+    ".KSSSSSSSSS.",
+    ".sSSSSSmmSS.",
+    "..sSSSSSSs..",
+    "...ssSSss...",
+]
+EYE_FAR = 5
+EYE_NEAR = 7
+MOUTH_X = 7
+HEAD_W = len(HEAD[0])
+HEAD_H = len(HEAD)
+EYE_ROWS = (6, 7)
+MOUTH_ROW = 9
+
+
+def stamp_head(c, ox, oy, eyes="open", mouth="smile", hair_lift=0.0):
+    """Blit the head map at (ox, oy), applying the eye and mouth variants."""
+    glow = eyes == "glow"
+    pupil = PAL["psy"] if glow else PAL["line"]
+    key = {
+        "K": PAL["hair"], "k": PAL["hair_hi"], "S": PAL["skin"],
+        "s": PAL["skin_sh"], "r": PAL["skin_sh"], "E": PAL["white"],
+        "P": pupil, "m": PAL["line"],
+    }
+    lift = 1 if hair_lift > 0.5 else 0
+    for y, row in enumerate(HEAD):
+        # a gust lifts the top of the hair without moving the face
+        dy = -lift if y <= 2 else 0
+        for x, ch in enumerate(row):
+            if ch == ".":
+                continue
+            if y in EYE_ROWS and ch in "EP":
+                if eyes == "shut":
+                    ch = "P" if y == EYE_ROWS[1] else "S"
+                elif eyes == "half" and y == EYE_ROWS[0]:
+                    ch = "S"
+            if y == MOUTH_ROW and ch == "m":
+                if mouth == "flat" and x == MOUTH_X + 1:
+                    ch = "S"
+            c.set(ox + x, oy + y + dy, key[ch])
+
+    # variants that add pixels rather than swap them
+    spec = ((EYE_FAR, "P"), (EYE_NEAR, "E"), (EYE_NEAR + 1, "P"))
+    if eyes == "wide":
+        for x, ch in spec:
+            c.set(ox + x, oy + EYE_ROWS[0] - 1, PAL["line"] if ch == "P" else PAL["white"])
+    if mouth == "open":
+        c.rect(ox + MOUTH_X, oy + MOUTH_ROW, 2, 2, PAL["line"])
+    elif mouth == "smile":
+        c.set(ox + MOUTH_X + 2, oy + MOUTH_ROW - 1, PAL["line"])
+    if glow:
+        for x, _ in spec:
+            c.rect(ox + x - 1, oy + EYE_ROWS[0] - 1, 3, 4, (142, 247, 255, 70))
+        for x, ch in spec:
+            for y in EYE_ROWS:
+                c.set(ox + x, oy + y, PAL["psy"] if ch == "P" else PAL["white"])
+
+
 # ------------------------------------------------------------------ drawing
 def draw_eli(
     body_dx=0.0,
@@ -81,112 +153,95 @@ def draw_eli(
     hipy = 21.5 + body_dy
     shx = hipx + lean
     shy = hipy - 5.6
-    headx = shx + lean * 0.6 + head_dx
-    heady = shy - 5.4 + head_dy
+    headx = shx + lean * 0.25 + head_dx
+    heady = shy - 6.2 + head_dy
 
     legs = legs or (((0, GROUND - hipy), (0, GROUND - hipy)))
     arms = arms or ((1.5, 4.5), (1.5, 4.5))
 
-    def draw_leg(target, col_leg, col_shoe):
+    def draw_leg(target, col_leg, col_leg_sh, col_shoe, col_shoe_sh, front):
         fx, fy = hipx + target[0], hipy + target[1]
         knee = ik(hipx, hipy, fx, fy, 4.2, 4.2, flip=-1)
-        limb(c, hipx, hipy, knee[0], knee[1], 4.4, 3.4, col_leg)
-        limb(c, knee[0], knee[1], fx, fy - 0.6, 3.4, 3.0, col_leg)
-        # foot
-        c.ellipse(fx + 0.9, fy - 0.4, 2.4, 1.5, col_shoe)
+        limb(c, hipx, hipy, knee[0], knee[1], 4.6, 3.6, col_leg)
+        limb(c, knee[0], knee[1], fx, fy - 1.0, 3.6, 3.0, col_leg)
+        if front:
+            # light comes from the upper left, so the trailing edge stays dark
+            limb(c, hipx + 1.4, hipy, knee[0] + 1.2, knee[1], 1.6, 1.4, col_leg_sh)
+            limb(c, knee[0] + 1.2, knee[1], fx + 1.0, fy - 1.4, 1.4, 1.2, col_leg_sh)
+        # shoe: a wedge with a lighter toe cap
+        c.ellipse(fx + 0.6, fy - 0.8, 2.7, 1.8, col_shoe)
+        c.ellipse(fx + 1.4, fy - 0.4, 1.9, 1.2, col_shoe_sh)
+        c.rect(fx - 0.8, fy - 2.0, 2.4, 1, col_shoe_sh)
 
-    def draw_arm(target, col):
+    def draw_arm(target, col, col_sh, front):
         hx, hy = shx + target[0], shy + target[1]
         elbow = ik(shx, shy, hx, hy, 3.4, 3.4, flip=1)
-        limb(c, shx, shy, elbow[0], elbow[1], 3.6, 2.8, col)
-        limb(c, elbow[0], elbow[1], hx, hy, 2.8, 2.4, col)
-        c.circle(hx, hy, 1.5, PAL["skin"])
+        limb(c, shx, shy, elbow[0], elbow[1], 3.8, 3.0, col)
+        limb(c, elbow[0], elbow[1], hx, hy, 3.0, 2.4, col)
+        if front:
+            limb(c, elbow[0], elbow[1] + 1.0, hx, hy + 0.8, 1.4, 1.2, col_sh)
+        # sleeve cuff, then the hand
+        d = math.hypot(hx - elbow[0], hy - elbow[1]) or 1
+        cx_ = hx - (hx - elbow[0]) / d * 1.6
+        cy_ = hy - (hy - elbow[1]) / d * 1.6
+        c.circle(cx_, cy_, 1.6, col_sh)
+        c.circle(hx, hy, 1.6, PAL["skin"])
+        c.circle(hx + 0.4, hy + 0.6, 0.7, PAL["skin_sh"])
 
-    # back leg + back arm first
-    draw_leg(legs[1], PAL["pants_sh"], PAL["shoe_sh"])
-    draw_arm(arms[1], PAL["hood_sh"])
+    # back leg + back arm first: darker, so depth reads at a glance
+    draw_leg(legs[1], PAL["pants_sh"], PAL["pants_sh"], PAL["shoe_sh"], PAL["shoe_sh"], False)
+    draw_arm(arms[1], PAL["hood_sh"], PAL["hood_sh"], False)
+
+    # --- the hood itself, bunched behind the neck ---------------------------
+    hood_x = shx - 3.0 - cape_up * 0.5
+    hood_y = shy - 2.4 - cape_up * 0.9
+    c.ellipse(hood_x, hood_y, 3.6, 3.2, PAL["hood_sh"])
+    c.ellipse(hood_x - 0.6, hood_y + 0.4, 2.6, 2.4, PAL["hood_dk"])
 
     # --- hoodie torso -------------------------------------------------------
     for i in range(9):
         t = i / 8.0
         x = hipx + (shx - hipx) * t
         y = hipy + (shy - hipy) * t
-        w = 8.0 - 1.2 * t
-        c.ellipse(x, y, w / 2, 2.0, PAL["hood"])
-    # hem shadow keeps the hoodie from merging with the legs
-    c.ellipse(hipx, hipy + 0.8, 3.9, 1.5, PAL["hood_sh"])
-    c.ellipse(shx, shy - 0.4, 3.7, 2.2, PAL["hood"])
-    # chest highlight
-    c.ellipse(shx + 1.6, shy + 1.2, 1.4, 2.0, PAL["hood_hi"])
+        w = 8.2 - 1.4 * t
+        c.ellipse(x, y, w / 2, 2.1, PAL["hood"])
+    # kangaroo pocket + hem, so the torso is not one flat block
+    c.ellipse(hipx + 0.6, hipy - 0.6, 3.4, 1.8, PAL["hood_sh"])
+    c.ellipse(hipx, hipy + 1.0, 4.0, 1.4, PAL["hood_dk"])
+    c.ellipse(shx, shy - 0.6, 3.8, 2.3, PAL["hood"])
+    # lit shoulder and shaded flank
+    c.ellipse(shx - 1.0, shy - 1.4, 2.6, 1.4, PAL["hood_hi"])
+    c.ellipse(shx + 2.4, shy + 1.6, 1.3, 2.6, PAL["hood_sh"])
 
-    # hood bunched behind the neck
-    c.ellipse(shx - 2.8 - cape_up * 0.6, shy - 1.8 - cape_up, 2.6, 2.0, PAL["hood_sh"])
+    # hood drawstrings and the crystal that started all of this
+    c.rect(shx - 0.4, shy - 0.2, 1, 3, PAL["hood_hi"])
+    c.rect(shx + 1.2, shy - 0.2, 1, 2, PAL["hood_hi"])
+    c.circle(shx + 0.6, shy + 3.0, 1.3, PAL["psy"])
+    c.set(shx + 0.6, shy + 2.6, PAL["white"])
 
     # --- front leg + head ---------------------------------------------------
-    draw_leg(legs[0], PAL["pants"], PAL["shoe"])
+    draw_leg(legs[0], PAL["pants"], PAL["pants_sh"], PAL["shoe"], PAL["shoe_sh"], True)
 
     # neck
-    c.rect(headx - 0.5, heady + 3.4, 2, 2, PAL["skin_sh"])
+    c.rect(headx - 0.5, heady + 4.0, 2, 2, PAL["skin_sh"])
 
-    # head: hair mass sits back/up, face skin is drawn over its front-lower half
-    c.ellipse(headx - 0.8, heady - 1.0 - hair_lift * 0.4, 5.2, 4.6, PAL["hair"])
-    c.ellipse(headx - 3.4, heady + 0.4, 2.0, 3.0, PAL["hair"])
-
-    c.ellipse(headx + 0.8, heady + 0.8, 4.2, 3.9, PAL["skin"])
-    c.ellipse(headx + 1.4, heady + 2.0, 3.2, 2.6, PAL["skin"])
-    # jaw shadow
-    c.ellipse(headx - 1.6, heady + 2.6, 2.0, 1.6, PAL["skin_sh"])
-
-    # fringe: spikes along the brow, never below the eyes
-    for sx, sy, rx, ry in (
-        (-1.6, -3.4, 2.6, 2.0),
-        (1.2, -3.0, 2.2, 1.8),
-        (3.2, -2.2, 1.6, 1.5),
-    ):
-        c.ellipse(headx + sx, heady + sy - hair_lift * 0.6, rx, ry, PAL["hair"])
-    c.ellipse(headx - 0.6, heady - 4.2 - hair_lift * 0.6, 2.8, 1.0, PAL["hair_hi"])
-    # sideburn / ear
-    c.ellipse(headx - 2.6, heady + 0.2, 1.2, 1.6, PAL["hair"])
-
-    # face: near eye reads white-with-pupil, far eye is a single dark column
-    ex, ey = headx + 0.6, heady + 1.0
-    nx = ex + 2.6
-    if eyes == "shut":
-        c.rect(ex, ey, 1, 1, PAL["line"])
-        c.rect(nx, ey, 2, 1, PAL["line"])
-    else:
-        eh = {"open": 2, "half": 1, "wide": 3, "glow": 2}[eyes]
-        top = ey - eh / 2.0
-        pupil = PAL["psy"] if eyes == "glow" else PAL["line"]
-        c.rect(ex, top, 1, eh, PAL["line"] if eyes != "glow" else pupil)
-        c.rect(nx, top, 2, eh, PAL["white"])
-        c.rect(nx + 1, top, 1, eh, pupil)
-        if eyes == "glow":
-            c.rect(ex - 1, top - 1, 2, eh + 2, (142, 247, 255, 70))
-            c.rect(nx - 1, top - 1, 4, eh + 2, (142, 247, 255, 70))
-    if mouth == "smile":
-        c.set(nx - 0.4, ey + 2.4, PAL["line"])
-        c.set(nx + 0.6, ey + 2.8, PAL["line"])
-        c.set(nx + 1.6, ey + 2.4, PAL["line"])
-    elif mouth == "open":
-        c.ellipse(nx + 0.6, ey + 2.6, 1.2, 1.1, PAL["line"])
-    elif mouth == "flat":
-        c.line(nx - 0.4, ey + 2.6, nx + 1.4, ey + 2.6, PAL["line"])
+    stamp_head(c, round(headx - 6.5), round(heady - 6), eyes, mouth, hair_lift)
 
     # --- scarf --------------------------------------------------------------
-    c.ellipse(shx - 0.2, shy - 1.4, 2.9, 1.3, PAL["scarf"])
-    tail_x = shx - 2.2
-    tail_y = shy - 0.6
-    seg = 4
+    c.ellipse(shx - 0.2, shy - 1.8, 2.9, 1.2, PAL["scarf"])
+    c.ellipse(shx + 0.4, shy - 2.2, 1.8, 0.7, PAL["scarf_hi"])
+    tail_x = shx - 2.4
+    tail_y = shy - 1.2
+    seg = 3
     for i in range(seg):
         t = (i + 1) / seg
-        x = tail_x - t * (2.2 + scarf * 3.0)
-        y = tail_y + math.sin(t * 2.0 + scarf) * 1.4 + t * (1.6 - scarf * 3.0)
+        x = tail_x - t * (1.8 + scarf * 3.2)
+        y = tail_y + math.sin(t * 1.8 + scarf) * 1.2 + t * (1.8 - scarf * 3.2)
         col = PAL["scarf"] if i % 2 == 0 else PAL["scarf_sh"]
-        c.circle(x, y, 1.6 - t * 0.5, col)
+        c.circle(x, y, 1.5 - t * 0.4, col)
 
     # --- front arm ----------------------------------------------------------
-    draw_arm(arms[0], PAL["hood"])
+    draw_arm(arms[0], PAL["hood"], PAL["hood_sh"], True)
 
     c.shade_top(PAL["white"], rows=1)
     c.outline(PAL["line"])

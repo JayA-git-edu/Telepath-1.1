@@ -118,6 +118,8 @@ export class Game {
     this.levelTime = 0;
     this.levelComplete = null;
     this.bossBar = null;
+    this.hpGhost = undefined;
+    this.bossGhost = undefined;
     this.particles.clear();
     this.shardsThisRun = new Set();
 
@@ -340,6 +342,7 @@ export class Game {
       case 'credits': this.updateCredits(dt); break;
       default: break;
     }
+    if (this.touch) this.touch.update(dt, this);
     this.particles.update(dt);
     this.renderer.updateCamera(dt);
   }
@@ -431,6 +434,15 @@ export class Game {
       this.player.die(this);
     }
     this.levelTime += dt;
+    // Health/boss bars keep a ghost fill that drains a beat behind the real
+    // value, so a hit reads as a chunk lost rather than an instant jump.
+    const hp = Math.max(0, this.player.hp);
+    if (this.hpGhost === undefined || this.hpGhost < hp) this.hpGhost = hp;
+    else this.hpGhost = Math.max(hp, this.hpGhost - dt * 1.6);
+    const boss = this.bosses.find((b) => !b.dead);
+    const bf = boss ? Math.max(0, boss.hp / boss.maxHp) : 0;
+    if (this.bossGhost === undefined || this.bossGhost < bf) this.bossGhost = bf;
+    else this.bossGhost = Math.max(bf, this.bossGhost - dt * 0.5);
     this.level.setEntities([...this.entities, ...this.projectiles]);
 
     this.player.update(dt, this);
@@ -563,6 +575,7 @@ export class Game {
       r.composite();
     }
     UI.drawToasts(this, r);
+    if (this.touch) this.touch.draw(r, this);
     r.finish();
   }
 

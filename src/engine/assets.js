@@ -41,7 +41,7 @@ export const WORLD_IDS = ['facility', 'city', 'caves', 'temple', 'frost', 'void'
 const SINGLES = [
   'crate_wood', 'crate_metal', 'crate_psy', 'boulder', 'switch_off', 'switch_on',
   'lever_off', 'lever_on', 'spikes', 'platform', 'crystal_key', 'heart_full',
-  'heart_empty', 'logo', 'font',
+  'logo', 'font',
 ];
 
 export class Assets {
