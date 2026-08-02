@@ -551,6 +551,7 @@ export class Game {
       case 'pause':
       case 'complete':
         this.drawWorld(r);
+        r.composite();
         UI.drawHud(this, r);
         if (this.dialogue) UI.drawDialogue(this, r);
         if (this.scene === 'pause') UI.drawPause(this, r);
@@ -558,8 +559,11 @@ export class Game {
         break;
       default: break;
     }
+    if (this.scene !== 'play' && this.scene !== 'pause' && this.scene !== 'complete') {
+      r.composite();
+    }
     UI.drawToasts(this, r);
-    r.end();
+    r.finish();
   }
 
   drawWorld(r) {

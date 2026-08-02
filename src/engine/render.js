@@ -128,14 +128,22 @@ export class Renderer {
     g.fillRect(sx - radius, sy - radius, radius * 2, radius * 2);
   }
 
-  /** Composite glow + darkness + flash. Call after all world/UI drawing. */
-  end() {
+  /**
+   * Composite the lighting layers over the world. Must happen before the UI is
+   * drawn, or the darkness layer dims the HUD along with the level.
+   */
+  composite() {
     const c = this.ctx;
     c.globalCompositeOperation = 'source-over';
     c.drawImage(this.light.canvas, 0, 0);
     c.globalCompositeOperation = 'lighter';
     c.drawImage(this.glow.canvas, 0, 0);
     c.globalCompositeOperation = 'source-over';
+  }
+
+  /** Screen flash, drawn last so it covers everything including the UI. */
+  finish() {
+    const c = this.ctx;
     if (this.flash > 0.001) {
       c.globalAlpha = Math.min(1, this.flash);
       c.fillStyle = this.flashColor;
