@@ -252,7 +252,7 @@ export class Telekinesis {
     }
     this.held = [];
     game.audio.play('throw');
-    game.renderer.shake(0.12);
+    game.punch(0.025, 0.14);
     this.player.castTimer = 0.3;
     return true;
   }
@@ -291,7 +291,8 @@ export class Telekinesis {
     this.pushFx = 0.3;
     this.pushAngle = Math.atan2(this.aim.y, this.aim.x);
     game.audio.play('push');
-    game.renderer.shake(0.2);
+    game.punch(0.04, 0.22);
+    game.ring(ox, oy, { color: '#ff9257', r0: 4, r1: 52, life: 0.3, width: 2 });
     this.player.castTimer = 0.3;
     // Newton's third law: a blast shoves the player back a little.
     p.vx -= this.aim.x * 60;
@@ -347,8 +348,8 @@ export class Telekinesis {
     p.dashTimer = 0.25;
     p.invuln = Math.max(p.invuln, 0.4);
     game.audio.play('dash');
-    game.renderer.shake(0.16);
-    game.renderer.doFlash(0.18, '#8ef7ff');
+    game.punch(0.05, 0.18, [0.18, '#8ef7ff']);
+    game.ring(p.cx, p.cy, { color: '#8ef7ff', r0: 3, r1: 34, life: 0.3, width: 2 });
     for (let i = 0; i < 14; i++) {
       const t = i / 14;
       game.particles.spawn({
@@ -416,8 +417,8 @@ export class Telekinesis {
     }
     this.release(game, true);
     game.audio.play('shock');
-    game.renderer.shake(0.5);
-    game.renderer.doFlash(0.25, '#8ef7ff');
+    game.punch(0.11, 0.55, [0.3, '#8ef7ff']);
+    game.ring(p.cx, p.cy, { color: '#8ef7ff', r0: 8, r1: 96, life: 0.45, width: 3 });
     game.particles.burst(p.cx, p.cy, 30, {
       color: '#8ef7ff', speed: 200, life: 0.55, size: 3, additive: true, glow: 8, round: true,
     });

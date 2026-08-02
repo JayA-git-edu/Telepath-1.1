@@ -1,6 +1,6 @@
 // Scene management, level lifecycle, entity bookkeeping and progression.
 
-import { Renderer, VIEW_W, VIEW_H } from '../engine/render.js';
+import { Renderer, VIEW_W, VIEW_H, withAlpha } from '../engine/render.js';
 import { Particles } from '../engine/particles.js';
 import { Level, TILE } from './level.js';
 import { Player } from './player.js';
@@ -16,6 +16,11 @@ import { STORY } from '../data/story.js';
 import * as UI from './ui.js';
 
 const SAVE_KEY = 'telepath.save.v1';
+
+const MOTE_COLORS = {
+  facility: '#5fe4ff', city: '#ff7fd0', caves: '#c98bff',
+  temple: '#ffd98f', frost: '#d6f2ff', void: '#6bffe0',
+};
 
 export class Game {
   constructor(canvas, assets, input, audio) {
@@ -46,10 +51,36 @@ export class Game {
     this.settings = this.save.settings;
     this.audio.setMusicOn(this.settings.music);
     this.audio.setSfxOn(this.settings.sfx);
+    this.renderer.bloom = this.settings.effects !== false;
     this.dialogue = null;
     this.hudPowerFlash = 0;
     this.bossBar = null;
     this.levelComplete = null;
+    this.hitStop = 0;
+    this.fx = [];
+  }
+
+  /**
+   * Freeze the world for a few frames and kick the camera. The pause is what
+   * makes an impact land: the shake alone reads as noise.
+   */
+  punch(stop, shake, flash) {
+    this.hitStop = Math.max(this.hitStop, stop);
+    if (shake) this.renderer.shake(shake);
+    if (flash) this.renderer.doFlash(flash[0], flash[1]);
+  }
+
+  /** Expanding ring at a point of impact. */
+  ring(x, y, opts = {}) {
+    this.fx.push({
+      x, y, t: 0,
+      life: opts.life || 0.35,
+      r0: opts.r0 || 3,
+      r1: opts.r1 || 26,
+      color: opts.color || '#8ef7ff',
+      width: opts.width || 2,
+    });
+    if (this.fx.length > 40) this.fx.shift();
   }
 
   // ------------------------------------------------------------------ save
@@ -118,6 +149,8 @@ export class Game {
     this.levelTime = 0;
     this.levelComplete = null;
     this.bossBar = null;
+    this.hitStop = 0;
+    this.fx = [];
     this.hpGhost = undefined;
     this.bossGhost = undefined;
     this.particles.clear();
@@ -373,7 +406,7 @@ export class Game {
 
   updateSettings(dt) {
     const input = this.input;
-    const items = ['MUSIC', 'SOUND', 'ERASE SAVE', 'BACK'];
+    const items = ['MUSIC', 'SOUND', 'EFFECTS', 'ERASE SAVE', 'BACK'];
     if (input.hit('down')) { this.menuIndex = (this.menuIndex + 1) % items.length; this.audio.play('menu'); }
     if (input.hit('up')) { this.menuIndex = (this.menuIndex + items.length - 1) % items.length; this.audio.play('menu'); }
     if (input.hit('back')) { this.scene = 'title'; this.menuIndex = 0; return; }
@@ -388,6 +421,11 @@ export class Game {
         case 'SOUND':
           this.settings.sfx = !this.settings.sfx;
           this.audio.setSfxOn(this.settings.sfx);
+          this.persist();
+          break;
+        case 'EFFECTS':
+          this.settings.effects = this.settings.effects === false;
+          this.renderer.bloom = this.settings.effects;
           this.persist();
           break;
         case 'ERASE SAVE':
@@ -420,6 +458,14 @@ export class Game {
   }
 
   updatePlay(dt) {
+    if (this.hitStop > 0) {
+      // World frozen; the camera and the FX rings keep moving so the hit still
+      // reads as motion rather than a stall.
+      this.hitStop = Math.max(0, this.hitStop - dt);
+      this.updateFx(dt);
+      return;
+    }
+    this.updateFx(dt);
     if (this.input.hit('pause')) {
       this.scene = 'pause';
       this.menuIndex = 0;
@@ -467,6 +513,36 @@ export class Game {
     );
   }
 
+  updateFx(dt) {
+    for (let i = this.fx.length - 1; i >= 0; i--) {
+      this.fx[i].t += dt;
+      if (this.fx[i].t >= this.fx[i].life) this.fx.splice(i, 1);
+    }
+    // Ambient motes: a few drifting specks keep still rooms from feeling dead.
+    if (this.level && this.particles.count < 400 && Math.random() < dt * 14) {
+      const r = this.renderer;
+      const col = MOTE_COLORS[LEVELS[this.levelIndex].world] || '#8ef7ff';
+      this.particles.spawn({
+        x: r.ox + Math.random() * VIEW_W,
+        y: r.oy + Math.random() * VIEW_H,
+        vx: (Math.random() - 0.5) * 6,
+        vy: -4 - Math.random() * 8,
+        life: 2.2 + Math.random() * 2, size: 1 + (Math.random() < 0.25 ? 1 : 0),
+        endSize: 1, color: col, additive: true, glow: 3, drag: 0.995,
+      });
+    }
+  }
+
+  drawFx(r) {
+    for (const f of this.fx) {
+      const t = f.t / f.life;
+      const rad = f.r0 + (f.r1 - f.r0) * (1 - (1 - t) * (1 - t));
+      const a = (1 - t) * 0.9;
+      r.ring(f.x, f.y, rad, withAlpha(f.color, a), f.width);
+      r.addGlow(f.x, f.y, rad * 1.2, f.color, a * 0.35);
+    }
+  }
+
   updateDialogue(dt) {
     const d = this.dialogue;
     d.t += dt;
@@ -508,7 +584,7 @@ export class Game {
 
   updatePause(dt) {
     const input = this.input;
-    const items = ['RESUME', 'RESTART LEVEL', 'MUSIC', 'SOUND', 'QUIT TO MENU'];
+    const items = ['RESUME', 'RESTART LEVEL', 'MUSIC', 'SOUND', 'EFFECTS', 'QUIT TO MENU'];
     if (input.hit('down')) { this.menuIndex = (this.menuIndex + 1) % items.length; this.audio.play('menu'); }
     if (input.hit('up')) { this.menuIndex = (this.menuIndex + items.length - 1) % items.length; this.audio.play('menu'); }
     if (input.hit('pause')) { this.scene = 'play'; return; }
@@ -525,6 +601,11 @@ export class Game {
         case 'SOUND':
           this.settings.sfx = !this.settings.sfx;
           this.audio.setSfxOn(this.settings.sfx);
+          this.persist();
+          break;
+        case 'EFFECTS':
+          this.settings.effects = this.settings.effects === false;
+          this.renderer.bloom = this.settings.effects;
           this.persist();
           break;
         case 'QUIT TO MENU': this.scene = 'title'; this.menuIndex = 0; this.audio.setTheme('menu'); break;
@@ -600,6 +681,7 @@ export class Game {
     if (!this.cutscene && this.scene === 'play') this.player.tk.draw(r, this, this.time);
 
     this.particles.draw(r);
+    this.drawFx(r);
     level.drawHazards(r, this.time);
   }
 }
@@ -611,7 +693,7 @@ function loadSave() {
     shards: {},
     seenIntros: {},
     unlockedLevels: 1,
-    settings: { music: true, sfx: true },
+    settings: { music: true, sfx: true, effects: true },
   };
   try {
     const raw = localStorage.getItem(SAVE_KEY);

@@ -67,8 +67,8 @@ export class Player extends Actor {
     this.controlLock = 0.18;
     this.vx = (dir || -this.facing) * 130;
     this.vy = -150;
-    game.renderer.shake(0.3);
-    game.renderer.doFlash(0.2, '#ff5c7a');
+    game.punch(0.09, 0.34, [0.24, '#ff5c7a']);
+    game.ring(this.cx, this.cy, { color: '#ff5c7a', r1: 30, life: 0.35, width: 2 });
     game.particles.burst(this.cx, this.cy, 14, {
       color: '#ff5c7a', speed: 110, life: 0.5, size: 3, additive: true, glow: 6,
     });
@@ -85,7 +85,8 @@ export class Player extends Actor {
     this.hp = 0;
     this.tk.release(game, true);
     game.audio.play('die');
-    game.renderer.shake(0.5);
+    game.punch(0.16, 0.55, [0.3, '#8ef7ff']);
+    game.ring(this.cx, this.cy, { color: '#8ef7ff', r0: 4, r1: 70, life: 0.7, width: 2 });
     game.particles.burst(this.cx, this.cy, 34, {
       color: '#8ef7ff', speed: 150, life: 0.9, size: 3, additive: true, glow: 8, round: true,
     });
@@ -191,7 +192,10 @@ export class Player extends Actor {
           game.particles.burst(this.cx, this.y + this.h, 8, {
             color: '#c9d6ff', speed: 70, life: 0.3, size: 2, angle: -Math.PI / 2, spread: 2.4,
           });
-          if (this.vy > 300) game.renderer.shake(0.1);
+          if (this.vy > 300) {
+            game.renderer.shake(0.12);
+            game.ring(this.cx, this.y + this.h, { color: '#c9d6ff', r0: 2, r1: 22, life: 0.22, width: 1 });
+          }
         }
       }
       this.vy = 0;

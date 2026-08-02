@@ -12,12 +12,12 @@
 // power pickups) lives in the `entities` array instead.
 
 export const WORLDS = {
-  facility: { name: 'RESEARCH FACILITY', color: '#45d6d0', ambient: 'rgba(8,10,26,0.62)' },
-  city: { name: 'NEON CITY ROOFTOPS', color: '#ff4fa3', ambient: 'rgba(12,6,26,0.58)' },
-  caves: { name: 'UNDERGROUND CRYSTAL CAVES', color: '#b06bff', ambient: 'rgba(10,4,22,0.78)' },
-  temple: { name: 'THE ANCIENT TEMPLE', color: '#ffd166', ambient: 'rgba(18,10,6,0.6)' },
-  frost: { name: 'FROZEN MOUNTAINS', color: '#aee8ff', ambient: 'rgba(12,20,38,0.42)' },
-  void: { name: 'THE VOID LABORATORY', color: '#58ffe0', ambient: 'rgba(4,2,12,0.8)' },
+  facility: { name: 'RESEARCH FACILITY', color: '#45d6d0', ambient: 'rgba(10,14,38,0.46)' },
+  city: { name: 'NEON CITY ROOFTOPS', color: '#ff4fa3', ambient: 'rgba(16,6,34,0.42)' },
+  caves: { name: 'UNDERGROUND CRYSTAL CAVES', color: '#b06bff', ambient: 'rgba(16,4,34,0.56)' },
+  temple: { name: 'THE ANCIENT TEMPLE', color: '#ffd166', ambient: 'rgba(26,12,4,0.44)' },
+  frost: { name: 'FROZEN MOUNTAINS', color: '#aee8ff', ambient: 'rgba(10,22,46,0.3)' },
+  void: { name: 'THE VOID LABORATORY', color: '#58ffe0', ambient: 'rgba(6,2,18,0.58)' },
 };
 
 export const LEVELS = [

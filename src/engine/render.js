@@ -26,6 +26,10 @@ export class Renderer {
     this._tinted = new Map();
     this.time = 0;
     this.integerScale = true;
+    this.bloom = true;
+    this.bloomSmall = makeLayer(VIEW_W >> 2, VIEW_H >> 2);
+    this.bloomSmall.ctx.imageSmoothingEnabled = true;
+    this.buildVignette();
     this.fitToWindow();
     addEventListener('resize', () => this.fitToWindow());
   }
@@ -141,7 +145,41 @@ export class Renderer {
     c.drawImage(this.light.canvas, 0, 0);
     c.globalCompositeOperation = 'lighter';
     c.drawImage(this.glow.canvas, 0, 0);
+    // Bloom: the same glow layer blurred twice, tight then wide. Cheap, and it
+    // is what makes the psychic light feel like light rather than a decal.
+    if (this.bloom) {
+      // Downscale-and-stretch instead of ctx.filter blur: visually the same at
+      // this resolution and several times cheaper.
+      const bs = this.bloomSmall;
+      const bw = bs.canvas.width;
+      const bh = bs.canvas.height;
+      bs.ctx.clearRect(0, 0, bw, bh);
+      bs.ctx.drawImage(this.glow.canvas, 0, 0, bw, bh);
+      c.save();
+      c.imageSmoothingEnabled = true;
+      c.globalAlpha = 0.8;
+      c.drawImage(bs.canvas, 0, 0, VIEW_W, VIEW_H);
+      c.globalAlpha = 0.45;
+      c.drawImage(bs.canvas, -2, -2, VIEW_W + 4, VIEW_H + 4);
+      c.restore();
+    }
     c.globalCompositeOperation = 'source-over';
+    if (this.vignette) c.drawImage(this.vignette, 0, 0);
+  }
+
+  buildVignette() {
+    const layer = makeLayer(VIEW_W, VIEW_H);
+    const g = layer.ctx;
+    const grad = g.createRadialGradient(
+      VIEW_W / 2, VIEW_H / 2, VIEW_H * 0.35,
+      VIEW_W / 2, VIEW_H / 2, VIEW_W * 0.72,
+    );
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.6, 'rgba(4,4,12,0.22)');
+    grad.addColorStop(1, 'rgba(3,3,10,0.55)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, VIEW_W, VIEW_H);
+    this.vignette = layer.canvas;
   }
 
   /** Screen flash, drawn last so it covers everything including the UI. */

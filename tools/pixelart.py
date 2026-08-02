@@ -133,6 +133,18 @@ class Canvas:
                     if hits >= rows:
                         break
 
+    def grade(self, saturation=0.22, lift=0.0, shadow_tint=None, shadow_amount=0.0):
+        """Final colour grade: lift saturation, optionally tint the darks."""
+        for i, p in enumerate(self.px):
+            if p[3] == 0:
+                continue
+            col = saturate(tuple(p), saturation, lift)
+            if shadow_tint and shadow_amount:
+                lum = (col[0] * 0.3 + col[1] * 0.6 + col[2] * 0.1) / 255.0
+                if lum < 0.5:
+                    col = mix(col, shadow_tint, shadow_amount * (1 - lum * 2))
+            self.px[i] = [col[0], col[1], col[2], p[3]]
+
     def replace(self, src, dst):
         for i, p in enumerate(self.px):
             if tuple(p[:3]) == tuple(src[:3]) and p[3] > 0:
@@ -169,6 +181,49 @@ def shade(c, amount):
     if amount >= 0:
         return mix(c, (255, 255, 255, 255), amount)
     return mix(c, (0, 0, 0, 255), -amount)
+
+
+def rgb_to_hsl(c):
+    r, g, b = c[0] / 255.0, c[1] / 255.0, c[2] / 255.0
+    mx, mn = max(r, g, b), min(r, g, b)
+    l = (mx + mn) / 2
+    if mx == mn:
+        return 0.0, 0.0, l
+    d = mx - mn
+    sat = d / (2 - mx - mn) if l > 0.5 else d / (mx + mn)
+    if mx == r:
+        h = ((g - b) / d) % 6
+    elif mx == g:
+        h = (b - r) / d + 2
+    else:
+        h = (r - g) / d + 4
+    return h / 6.0, sat, l
+
+
+def hsl_to_rgb(h, s, l, a=255):
+    def f(n):
+        k = (n + h * 12) % 12
+        m = s * min(l, 1 - l)
+        return l - m * max(-1, min(k - 3, 9 - k, 1))
+    return (
+        int(round(max(0.0, min(1.0, f(0))) * 255)),
+        int(round(max(0.0, min(1.0, f(8))) * 255)),
+        int(round(max(0.0, min(1.0, f(4))) * 255)),
+        a,
+    )
+
+
+def saturate(c, amount=0.25, lift=0.0):
+    """Push a colour away from grey, optionally brightening it."""
+    h, s, l = rgb_to_hsl(c)
+    s = max(0.0, min(1.0, s + amount * (1 - s)))
+    l = max(0.0, min(1.0, l + lift))
+    return hsl_to_rgb(h, s, l, c[3] if len(c) > 3 else 255)
+
+
+def hue_shift(c, degrees):
+    h, s, l = rgb_to_hsl(c)
+    return hsl_to_rgb((h + degrees / 360.0) % 1.0, s, l, c[3] if len(c) > 3 else 255)
 
 
 def hexc(s, a=255):

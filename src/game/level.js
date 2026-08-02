@@ -68,9 +68,30 @@ export class Level {
       }
     }
     if (def.bgFill) {
-      // Interior worlds get a wall behind everything instead of open sky.
+      // Interior worlds get a wall behind the play space - but only near the
+      // terrain. Further out the parallax shows through, which gives the big
+      // rooms depth instead of one flat texture.
+      const reach = def.bgReach === undefined ? 5 : def.bgReach;
+      const dist = new Int16Array(this.cols * this.rows).fill(9999);
+      const queue = [];
       for (let i = 0; i < this.tiles.length; i++) {
-        if (this.tiles[i] === T_EMPTY) this.tiles[i] = T_BG;
+        if (this.isSolidType(this.tiles[i])) { dist[i] = 0; queue.push(i); }
+      }
+      for (let head = 0; head < queue.length; head++) {
+        const i = queue[head];
+        if (dist[i] >= reach) continue;
+        const x = i % this.cols;
+        const y = (i / this.cols) | 0;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) continue;
+          const j = ny * this.cols + nx;
+          if (dist[j] > dist[i] + 1) { dist[j] = dist[i] + 1; queue.push(j); }
+        }
+      }
+      for (let i = 0; i < this.tiles.length; i++) {
+        if (this.tiles[i] === T_EMPTY && dist[i] <= reach) this.tiles[i] = T_BG;
       }
     }
     this.bake();
@@ -295,6 +316,25 @@ export class Level {
         const sx = (idx % sheet.cols) * sheet.fw;
         const sy = Math.floor(idx / sheet.cols) * sheet.fh;
         ctx.drawImage(sheet.img, sx, sy, TILE, TILE, x * TILE, y * TILE, TILE, TILE);
+        if (t === T_BG) {
+          // Where the backdrop wall stops and the parallax shows through,
+          // fade its edge so the opening reads as a window, not a hole.
+          const px = x * TILE;
+          const py = y * TILE;
+          const sides = [
+            [this.at(x, y - 1), 0, 0, TILE, 1, 0, 1],
+            [this.at(x, y + 1), 0, TILE - 1, TILE, 1, 0, -1],
+            [this.at(x - 1, y), 0, 0, 1, TILE, 1, 0],
+            [this.at(x + 1, y), TILE - 1, 0, 1, TILE, -1, 0],
+          ];
+          for (const [n, ox, oy, w, h, dx, dy] of sides) {
+            if (n !== T_EMPTY) continue;
+            for (let k = 0; k < 4; k++) {
+              ctx.fillStyle = `rgba(6,7,18,${0.5 - k * 0.11})`;
+              ctx.fillRect(px + ox + dx * k, py + oy + dy * k, w, h);
+            }
+          }
+        }
         if (t === T_ICE) {
           ctx.save();
           ctx.globalCompositeOperation = 'lighter';

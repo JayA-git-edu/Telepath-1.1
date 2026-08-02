@@ -3,7 +3,7 @@
 import math
 import os
 
-from pixelart import Canvas, hexc, mix, sheet, shade, write_png
+from pixelart import Canvas, hexc, mix, saturate, sheet, shade, write_png
 
 OUT = os.path.join(os.path.dirname(__file__), "..", "assets")
 
@@ -30,11 +30,11 @@ def finish(c, outline=True, rim=True):
 def crate(kind="wood"):
     c = Canvas(16, 16)
     if kind == "wood":
-        base, dark, light, band = hexc("c08b4a"), hexc("8a5c2a"), hexc("e0b070"), hexc("6b4520")
+        base, dark, light, band = hexc("d98f34"), hexc("94551b"), hexc("ffd089"), hexc("6b3c12")
     elif kind == "metal":
-        base, dark, light, band = hexc("8a94ad"), hexc("515a75"), hexc("c2cbe0"), hexc("39405a")
+        base, dark, light, band = hexc("8fa6cc"), hexc("4a5a85"), hexc("d8e6ff"), hexc("2f3a5c")
     else:  # psychic / light crate
-        base, dark, light, band = hexc("3fd2c8"), hexc("1e7d80"), hexc("a8fff4"), hexc("14565c")
+        base, dark, light, band = hexc("2ee6d2"), hexc("11868a"), hexc("bafff6"), hexc("0a5560")
     c.rect(1, 1, 14, 14, base)
     c.rect_outline(1, 1, 14, 14, band)
     for i in range(3, 14, 4):
@@ -50,7 +50,7 @@ def crate(kind="wood"):
 
 def boulder():
     c = Canvas(24, 24)
-    base, dark, light = hexc("6b6f80"), hexc("3d4152"), hexc("9aa0b5")
+    base, dark, light = hexc("6d7a99"), hexc("3a4166"), hexc("a6b4d4")
     c.ellipse(12, 13, 10.5, 9.5, base)
     for i in range(10):
         x = 4 + noise(i, 1, 3) * 16
@@ -130,7 +130,7 @@ def spikes(up=True):
 
 def weak_wall(stage):
     c = Canvas(16, 16)
-    base, dark, light = hexc("7a6a5e"), hexc("4a3e36"), hexc("a6968a")
+    base, dark, light = hexc("9a7f5e"), hexc("57402a"), hexc("c9ae8a")
     c.rect(0, 0, 16, 16, base)
     for i in range(14):
         x = noise(i, 1, 9) * 16
@@ -148,7 +148,7 @@ def weak_wall(stage):
 
 def platform(w=48):
     c = Canvas(w, 16)
-    body, dark, light = hexc("4b5573"), hexc("2c3350"), hexc("7c88ab")
+    body, dark, light = hexc("4e5d8c"), hexc("29325a"), hexc("8797c4")
     c.rect(0, 2, w, 10, body)
     c.rect(0, 2, w, 2, light)
     c.rect(0, 10, w, 2, dark)
@@ -227,7 +227,7 @@ def drone():
         c = Canvas(24, 24)
         p = math.sin(i / 6 * math.tau)
         y = 11 + p * 1.4
-        body, dark, light = hexc("6f7ba0"), hexc("39415e"), hexc("aab5d2")
+        body, dark, light = hexc("6f86bd"), hexc("31406b"), hexc("b6c8ef")
         c.ellipse(12, y, 7.5, 5.5, body)
         c.ellipse(12, y - 1.4, 6.0, 3.4, light)
         c.ellipse(12, y + 2.0, 7.0, 2.6, dark)
@@ -250,7 +250,7 @@ def guard():
         c = Canvas(24, 32)
         t = i / 6
         step = math.sin(t * math.tau)
-        body, dark, light = hexc("5a6a8f"), hexc("323b57"), hexc("93a2c4")
+        body, dark, light = hexc("5573ad"), hexc("2c3a63"), hexc("9cb6e4")
         # legs
         for s, off in ((0, step), (1, -step)):
             col = body if s == 0 else dark
@@ -277,7 +277,7 @@ def spider():
     for i in range(6):
         c = Canvas(32, 24)
         t = i / 6
-        body, dark, light = hexc("7a4fb0"), hexc("40265e"), hexc("c39aff")
+        body, dark, light = hexc("8f4fd6"), hexc("46216e"), hexc("d4a8ff")
         for leg in range(4):
             side = -1 if leg < 2 else 1
             phase = math.sin(t * math.tau + leg * 1.6)
@@ -304,7 +304,7 @@ def turret():
     frames = []
     for i in range(4):
         c = Canvas(16, 16)
-        body, dark, light = hexc("5a6480"), hexc("323b57"), hexc("98a4c2")
+        body, dark, light = hexc("5c6b96"), hexc("2e3a5f"), hexc("a4b6dc")
         c.rect(2, 9, 12, 6, body)
         c.rect(2, 9, 12, 2, light)
         c.rect(2, 14, 12, 2, dark)
@@ -360,7 +360,7 @@ def emech():
         c = Canvas(64, 64)
         t = i / 6
         p = math.sin(t * math.tau)
-        body, dark, light = hexc("59637f"), hexc("2c3350"), hexc("98a4c2")
+        body, dark, light = hexc("5d6d99"), hexc("293356"), hexc("a8b8de")
         acc = hexc("ff7a5c")
         # legs
         for s in (-1, 1):
@@ -396,7 +396,7 @@ def crystal_spider_boss():
     for i in range(6):
         c = Canvas(80, 56)
         t = i / 6
-        body, dark, light = hexc("6b3fa0"), hexc("35205a"), hexc("bb92ff")
+        body, dark, light = hexc("8043c9"), hexc("3b1d68"), hexc("c9a0ff")
         cry = hexc("6bffd5")
         for leg in range(6):
             side = -1 if leg < 3 else 1
@@ -470,7 +470,7 @@ def mind_warden():
         c = Canvas(64, 64)
         t = i / 6
         p = math.sin(t * math.tau)
-        body, dark, light = hexc("b06bff"), hexc("4a2b7a"), hexc("e6ccff")
+        body, dark, light = hexc("c06bff"), hexc("54258f"), hexc("efd6ff")
         # floating brain-core
         c.ellipse(32, 26 + p, 18, 15, body)
         for j in range(9):
@@ -695,6 +695,7 @@ def main():
         "logo": logo(),
     }
     for name, img in single.items():
+        img.grade(0.2, 0.02)
         write_png(os.path.join(OUT, name + ".png"), img)
 
     sheets = {
@@ -723,7 +724,9 @@ def main():
         "power_icons": [power_icon(i) for i in range(8)],
     }
     for name, frames in sheets.items():
-        write_png(os.path.join(OUT, name + ".png"), sheet(frames))
+        packed = sheet(frames)
+        packed.grade(0.2, 0.02)
+        write_png(os.path.join(OUT, name + ".png"), packed)
     print(f"wrote {len(single)} sprites and {len(sheets)} sheets")
 
 

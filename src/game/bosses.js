@@ -63,7 +63,8 @@ export class Boss extends Actor {
     this.hitCooldown = 0.6;
     this.hitFlash = 0.35;
     game.audio.play('bossHit');
-    game.renderer.shake(0.3);
+    game.punch(0.1, 0.35, [0.14, '#ffd166']);
+    game.ring(this.cx, this.cy, { color: '#ffd166', r1: this.w * 0.9, life: 0.4, width: 2 });
     game.particles.burst(this.cx, this.cy, 16, {
       color: '#ffd0d0', speed: 130, life: 0.5, size: 3, additive: true, glow: 7,
     });
@@ -77,8 +78,8 @@ export class Boss extends Actor {
     this.deathT = 2.2;
     this.vulnerable = false;
     game.audio.play('win');
-    game.renderer.shake(1.0);
-    game.renderer.doFlash(0.5, '#ffffff');
+    game.punch(0.3, 1.0, [0.5, '#ffffff']);
+    game.ring(this.cx, this.cy, { color: '#ffffff', r0: 6, r1: 130, life: 0.9, width: 3 });
   }
 
   updateDeath(dt, game) {

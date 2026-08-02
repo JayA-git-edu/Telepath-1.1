@@ -223,6 +223,7 @@ export function drawSettings(game, r) {
   const items = [
     ['MUSIC', game.settings.music ? 'ON' : 'OFF'],
     ['SOUND', game.settings.sfx ? 'ON' : 'OFF'],
+    ['EFFECTS', game.settings.effects === false ? 'OFF' : 'ON'],
     ['ERASE SAVE', ''],
     ['BACK', ''],
   ];
@@ -274,8 +275,8 @@ export function drawSelect(game, r) {
 // ----------------------------------------------------------------- pause
 export function drawPause(game, r) {
   r.rect(0, 0, VIEW_W, VIEW_H, 'rgba(5,6,16,0.72)', true);
-  const items = ['RESUME', 'RESTART LEVEL', 'MUSIC', 'SOUND', 'QUIT TO MENU'];
-  const w = 180, h = 110;
+  const items = ['RESUME', 'RESTART LEVEL', 'MUSIC', 'SOUND', 'EFFECTS', 'QUIT TO MENU'];
+  const w = 186, h = 124;
   const x = (VIEW_W - w) / 2, y = (VIEW_H - h) / 2;
   panel(r, x, y, w, h, 0.94);
   r.text('PAUSED', VIEW_W / 2, y + 10, { color: ACCENT, align: 'center' });
@@ -286,6 +287,7 @@ export function drawPause(game, r) {
     let label = item;
     if (item === 'MUSIC') label = `MUSIC  ${game.settings.music ? 'ON' : 'OFF'}`;
     if (item === 'SOUND') label = `SOUND  ${game.settings.sfx ? 'ON' : 'OFF'}`;
+    if (item === 'EFFECTS') label = `EFFECTS  ${game.settings.effects === false ? 'OFF' : 'ON'}`;
     r.text(label, x + 26, iy, { color: sel ? '#ffffff' : DIM });
   });
 }

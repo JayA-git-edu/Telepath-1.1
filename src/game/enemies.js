@@ -49,14 +49,16 @@ export class Enemy extends Actor {
       this.die(game);
     } else {
       game.audio.play('hitEnemy');
-      game.renderer.shake(0.1);
+      game.punch(0.045, 0.14);
+      game.ring(this.cx, this.cy, { color: '#ffd0d0', r1: 20, life: 0.25, width: 1 });
     }
   }
 
   die(game) {
     this.dead = true;
     game.audio.play('enemyDie');
-    game.renderer.shake(0.2);
+    game.punch(0.07, 0.26, [0.1, '#ff9257']);
+    game.ring(this.cx, this.cy, { color: '#ff9257', r1: 34, life: 0.4, width: 2 });
     game.particles.burst(this.cx, this.cy, 22, {
       color: '#ff9257', speed: 140, life: 0.6, size: 3, additive: true, glow: 7,
     });

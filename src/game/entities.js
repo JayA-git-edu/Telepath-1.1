@@ -82,7 +82,10 @@ export class Prop extends Actor {
     game.particles.burst(this.cx, this.cy + this.h / 2, 5, {
       color: '#cfd8ff', speed: 50, life: 0.3, size: 2, gravity: 300,
     });
-    if (speed > 240) game.renderer.shake(0.12);
+    if (speed > 240) {
+      game.punch(0.02, 0.14);
+      game.ring(this.cx, this.cy + this.h / 2, { color: '#cfd8ff', r0: 2, r1: 18, life: 0.2, width: 1 });
+    }
   }
 
   /** Damage dealt to entities this object slams into. */
@@ -345,7 +348,8 @@ export class WeakWall extends Solid {
     if (this.hp <= 0) {
       this.dead = true;
       this.collidable = false;
-      game.renderer.shake(0.3);
+      game.punch(0.07, 0.34);
+      game.ring(this.cx, this.cy, { color: '#c9ae8a', r1: 30, life: 0.35, width: 2 });
       game.particles.burst(this.cx, this.cy, 22, {
         color: '#7a6a5e', speed: 150, life: 0.7, size: 3, gravity: 500,
       });

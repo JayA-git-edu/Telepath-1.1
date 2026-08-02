@@ -20,15 +20,15 @@ PAL = {
     "skin": hexc("ffd0a0"),
     "skin_hi": hexc("ffe8cc"),
     "skin_sh": hexc("e2a274"),
-    "hair": hexc("3b2b4f"),
-    "hair_hi": hexc("614a80"),
-    "hood": hexc("2fb8c6"),
-    "hood_sh": hexc("1a7c8c"),
+    "hair": hexc("41265e"),
+    "hair_hi": hexc("7048a8"),
+    "hood": hexc("22c8d8"),
+    "hood_sh": hexc("11808f"),
     "hood_dk": hexc("125863"),
     "hood_hi": hexc("77e6ec"),
-    "pants": hexc("3d4c72"),
-    "pants_sh": hexc("2a3555"),
-    "shoe": hexc("ec5a48"),
+    "pants": hexc("35528f"),
+    "pants_sh": hexc("23386b"),
+    "shoe": hexc("ff5340"),
     "shoe_sh": hexc("a8362b"),
     "scarf": hexc("ff9257"),
     "scarf_hi": hexc("ffc094"),
@@ -447,7 +447,9 @@ def main():
         "eli_crouch": anim_crouch(),
     }
     for name, frames in sets.items():
-        write_png(os.path.join(OUT, name + ".png"), sheet(frames))
+        packed = sheet(frames)
+        packed.grade(0.16, 0.02)
+        write_png(os.path.join(OUT, name + ".png"), packed)
         print(f"{name}: {len(frames)} frames")
 
 
