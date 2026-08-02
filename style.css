@@ -1,0 +1,50 @@
+:root { color-scheme: dark; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #06060d;
+  overflow: hidden;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: #8ef7ff;
+}
+
+#wrap {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 40%, #131230 0%, #06060d 70%);
+}
+
+canvas#game {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  touch-action: none;
+  outline: none;
+  box-shadow: 0 0 0 1px #1d1b3a, 0 0 60px rgba(80, 200, 255, 0.10);
+}
+
+#boot {
+  position: absolute;
+  font-size: 14px;
+  letter-spacing: 4px;
+  text-shadow: 0 0 12px rgba(142, 247, 255, 0.6);
+}
+
+#boot.hidden { display: none; }
+
+.dots::after {
+  content: "";
+  animation: dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}

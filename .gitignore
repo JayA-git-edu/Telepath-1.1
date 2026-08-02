@@ -1,0 +1,7 @@
+node_modules/
+tests/shots/
+probe.png
+probe.mjs
+levels.png
+__pycache__/
+*.pyc
