@@ -425,7 +425,7 @@ export const LEVELS = [
       { t: 'barrier', x: 24, y: 10, ch: 0, h: 4 },
       { t: 'lever', x: 40, y: 12, ch: 1 },
       { t: 'barrier', x: 50, y: 10, ch: 1, h: 4 },
-      { t: 'platform', x: 18, y: 12, w: 3, path: [[18, 12], [18, 6]], speed: 26 },
+      { t: 'platform', x: 26, y: 13, w: 3, path: [[26, 13], [26, 8]], speed: 26 },
     ],
   },
 

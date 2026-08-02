@@ -108,4 +108,23 @@ node tests/bot.mjs           # a heuristic bot actually plays each level with on
                              # the powers the player would own at that point
 ```
 
-Both write screenshots and a JSON report to `tests/shots/`.
+Both write screenshots and a JSON report to `tests/shots/`. `playtest.mjs` is the
+regression gate: 19/19 levels load, run and complete with zero console errors.
+
+`bot.mjs` is a solvability probe, not a pass/fail gate. It walks toward the exit
+and knows a handful of tricks — flip a switch, weigh a plate down, shove a
+boulder it cannot lift, ride a platform, freeze a stepping stone, build a
+bridge, throw things at a boss when the weak point opens. It clears the levels
+whose route matches those tricks; where it stalls, the cause is usually its own
+timing (boarding a platform mid-swing, landing a throw inside a three-second
+window) rather than a blocked level. Every stall was reviewed by hand, and the
+ones that turned out to be real were fixed:
+
+- CONTAINMENT — a shoved boulder rolled straight over the pressure plate.
+- THE LONG HALL — ragged rows and an exit wedged under a ceiling.
+- TRIALS OF STONE — the lift stood twelve tiles from the wall it bypasses.
+- ROOFTOP RUN, THE VOID LABORATORY — Eli spawned in a sealed one-tile alcove.
+- PROTOTYPE E-MECH — a crate spawned on Eli's head.
+
+Debug a stall with `BOT_DEBUG=1 node tests/bot.mjs --level N`, which prints the
+bot's per-tick decisions.

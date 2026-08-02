@@ -154,37 +154,52 @@ await page.evaluate(() => {
       return false;
     };
     const bigGap = dir !== 0 && p.onGround && !floorAhead(64);
-    if (!acted && bigGap) {
-      // A platform you can hold while standing on it beats every other trick.
-      const plat = g.entities.find((e) => e.kind === 'platform' && e.grabbable && !e.dead &&
-        Math.hypot(e.cx - p.cx, e.cy - p.cy) < 140);
-      if (plat) {
-        if (plat.isRiding(p)) {
-          const holdingIt = p.tk.held.includes(plat);
-          if (holdingIt) aimAt(p.cx + dir * 46, p.cy - 2);
+    // A wall taller than Eli can jump, or a gap with no floor: look for a
+    // platform to ride, a stepping stone to freeze, or conjure one.
+    const tallWall = p.onGround && p.collides(g.level, dir * 6, 0) &&
+      p.collides(g.level, dir * 6, -22) && p.collides(g.level, dir * 6, -36);
+    const needLift = bigGap || tallWall;
+    if (!acted && needLift) {
+      const plat = g.entities
+        .filter((e) => e.kind === 'platform' && !e.dead)
+        .sort((a, c) => Math.hypot(a.cx - p.cx, a.cy - p.cy) - Math.hypot(c.cx - p.cx, c.cy - p.cy))[0];
+      const platNear = plat && Math.hypot(plat.cx - p.cx, plat.cy - p.cy) < 170;
+      if (platNear && plat.isRiding(p)) {
+        if (plat.grabbable) {
+          if (p.tk.held.includes(plat)) aimAt(p.cx + dir * 46, p.cy - 2);
           else aimAt(plat.cx, plat.cy);
           press('grab', true);
           B.actT = 0.5;
-          B.skipMove = true;
+        }
+        B.skipMove = true;      // let the platform do the travelling
+        acted = true;
+      } else if (platNear) {
+        const atBrink = !floorAhead(20);
+        if (Math.abs(plat.cx - p.cx) < 26 && plat.y >= p.y) {
+          press('right', plat.cx > p.cx);
+          press('left', plat.cx < p.cx);
+          B.moveHandled = true;
+        } else if (atBrink) {
+          B.skipMove = true;    // wait for it to come alongside
         } else {
           press('right', plat.cx > p.cx + 4);
           press('left', plat.cx < p.cx - 4);
-          if (p.onGround && B.jumpT <= 0 && Math.abs(plat.cx - p.cx) < 30) {
-            press('jump', true);
-            B.jumpT = 0.75;
-          }
+          if (p.onGround && B.jumpT <= 0 && plat.y < p.y - 8) { press('jump', true); B.jumpT = 0.7; }
           B.moveHandled = true;
         }
         acted = true;
       }
-      if (!acted && g.hasPower('stasis') && p.tk.held.length) {
-        aimAt(p.cx + dir * 40, p.cy + 16);
+      const steppingStone = [...g.entities, ...g.projectiles].some((e) =>
+        e.frozen > 0 && Math.sign(e.cx - p.cx) === dir &&
+        Math.abs(e.cx - p.cx) < 64 && e.cy > p.cy - 10);
+      if (!acted && !steppingStone && g.hasPower('stasis') && p.tk.held.length) {
+        aimAt(p.cx + dir * 38, p.cy + 14);
         if (B.actT <= 0) { press('stasis', true); B.actT = 0.6; }
         acted = true;
         B.skipMove = true;
-      } else if (!acted && g.hasPower('stasis') && !p.tk.held.length) {
+      } else if (!acted && !steppingStone && g.hasPower('stasis') && !p.tk.held.length) {
         const ammo = g.grabbables().filter((e) => !e.heldBy && e.kind !== 'projectile' && !e.frozen)
-          .sort((a, b) => Math.hypot(a.cx - p.cx, a.cy - p.cy) - Math.hypot(b.cx - p.cx, b.cy - p.cy))[0];
+          .sort((a, c) => Math.hypot(a.cx - p.cx, a.cy - p.cy) - Math.hypot(c.cx - p.cx, c.cy - p.cy))[0];
         if (ammo && Math.hypot(ammo.cx - p.cx, ammo.cy - p.cy) < p.tk.range) {
           aimAt(ammo.cx, ammo.cy);
           if (B.actT <= 0) { press('grab', true); B.actT = 0.35; }
@@ -245,7 +260,7 @@ await page.evaluate(() => {
       B.lastDbg = Math.floor(B.tick * 4);
       B.debug.push(`x=${Math.round(p.cx)} y=${Math.round(p.cy)} g=${p.onGround ? 1 : 0} ` +
         `held=${p.tk.held.map((h) => h.kind).join(',') || '-'} acted=${acted ? 1 : 0} gap=${bigGap ? 1 : 0} ` +
-        `f40=${floorAhead(40) ? 1 : 0} f64=${floorAhead(64) ? 1 : 0} stuck=${B.stuckT.toFixed(1)}`);
+        `f64=${floorAhead(64) ? 1 : 0} wall=${tallWall ? 1 : 0} stuck=${B.stuckT.toFixed(1)}`);
     }
     B.skipMove = false;
     B.moveHandled = false;

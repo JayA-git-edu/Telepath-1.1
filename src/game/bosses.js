@@ -22,6 +22,7 @@ export class Boss extends Actor {
     this.freezable = false;
     this.introT = 1.6;
     this.deathT = 0;
+    this.hitCooldown = 0;
     this.phase = 1;
     this.spawnX = x;
     this.spawnY = y;
@@ -35,6 +36,7 @@ export class Boss extends Actor {
     this.introT = 1.0;
     this.dead = false;
     this.deathT = 0;
+    this.hitCooldown = 0;
     this.vulnerable = false;
     this.phase = 1;
     this.vx = this.vy = 0;
@@ -47,6 +49,9 @@ export class Boss extends Actor {
 
   damage(game, amount, dir) {
     if (this.dead || this.deathT > 0) return;
+    // Without this a pile of already-thrown crates resting inside the boss
+    // empties its health bar the instant the weak point opens.
+    if (this.hitCooldown > 0) return;
     if (!this.vulnerable) {
       game.particles.burst(this.cx, this.cy, 6, {
         color: '#9aa4c0', speed: 70, life: 0.3, size: 2,
@@ -54,7 +59,8 @@ export class Boss extends Actor {
       game.audio.play('deflect');
       return;
     }
-    this.hp -= amount;
+    this.hp -= Math.min(amount, 2);
+    this.hitCooldown = 0.6;
     this.hitFlash = 0.35;
     game.audio.play('bossHit');
     game.renderer.shake(0.3);
@@ -92,6 +98,7 @@ export class Boss extends Actor {
   common(dt, game) {
     this.animT += dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt * 3);
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     if (this.deathT > 0) { this.updateDeath(dt, game); return false; }
     if (this.introT > 0) {
       this.introT -= dt;
@@ -200,12 +207,14 @@ export class EMech extends Boss {
         this.vulnerable = true;
         // Vent bombs the player can catch and throw back.
         this.bombT -= dt;
-        if (this.bombT <= 0) {
+        const live = game.entities.filter((e) => e.isBomb && !e.dead).length;
+        if (this.bombT <= 0 && live < 4) {
           this.bombT = 1.1;
           const bomb = new Crate(this.cx - 8, this.y - 10, 'psy');
           bomb.vx = (Math.random() - 0.5) * 90;
           bomb.vy = -190;
           bomb.throwDamage = 2;
+          bomb.isBomb = true;
           game.spawn(bomb);
         }
         if (this.stateT > 3.2) {

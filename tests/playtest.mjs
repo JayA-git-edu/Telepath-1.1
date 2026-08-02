@@ -239,8 +239,12 @@ for (const i of indices) {
     if (g.bosses.length) {
       const b = g.bosses[0];
       b.introT = 0;
-      b.vulnerable = true;
-      b.damage(g, 99, 1);
+      // Bosses cap damage per hit and have i-frames, so land the hits one by one.
+      for (let k = 0; k < 40 && b.hp > 0; k++) {
+        b.vulnerable = true;
+        b.hitCooldown = 0;
+        b.damage(g, 2, 1);
+      }
       return 'boss';
     }
     return 'none';
